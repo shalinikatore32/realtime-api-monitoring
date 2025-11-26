@@ -1,0 +1,94 @@
+###########################################
+# ENV FILES (CRITICAL)
+###########################################
+.env
+.env.*
+*.env
+*.secret
+secrets.json
+
+# Next.js environment files
+api-monitor-frontend/.env.local
+api-monitor-frontend/.env.development.local
+api-monitor-frontend/.env.production.local
+api-monitor-frontend/.env.test.local
+
+# root env files if created
+.env.local
+.env.development.local
+.env.production.local
+
+
+###########################################
+# PYTHON / FASTAPI BACKEND
+###########################################
+api-monitoring-system/__pycache__/
+api-monitoring-system/**/*.pyc
+api-monitoring-system/**/*.pyo
+api-monitoring-system/**/*.pyd
+api-monitoring-system/.pytest_cache/
+api-monitoring-system/.mypy_cache/
+api-monitoring-system/.ruff_cache/
+api-monitoring-system/.coverage
+api-monitoring-system/coverage.xml
+api-monitoring-system/.venv/
+api-monitoring-system/venv/
+venv/
+__pycache__/
+
+# Backend logs
+api-monitoring-system/logs/
+*.log
+
+
+###########################################
+# NODE / NEXT.JS FRONTEND
+###########################################
+# Node modules
+node_modules/
+api-monitor-frontend/node_modules/
+
+# Next.js build output
+.next/
+api-monitor-frontend/.next/
+api-monitor-frontend/out/
+api-monitor-frontend/build/
+api-monitor-frontend/.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+###########################################
+# COMMON JUNK
+###########################################
+*.log
+*.tmp
+*.cache
+
+
+###########################################
+# OS FILES
+###########################################
+.DS_Store
+Thumbs.db
+
+
+###########################################
+# IDE / EDITOR
+###########################################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+###########################################
+# OTHER
+###########################################
+dist/
+build/
+coverage/
