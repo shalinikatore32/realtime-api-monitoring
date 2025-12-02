@@ -4,9 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 import { TrendingUp, BarChart2, Clock } from "lucide-react";
+import Cookies from "js-cookie";
+import { API_BASE } from "@/lib/api";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const token = Cookies.get("token");
 
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    console.error("Failed to fetch KPI Stats", res.status);
+    return null;
+  }
+
+  return res.json();
+};
 export default function KPIStats() {
   const { data } = useSWR("http://localhost:8000/api/metrics", fetcher, {
     refreshInterval: 4000,

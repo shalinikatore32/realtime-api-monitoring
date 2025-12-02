@@ -38,16 +38,17 @@ def normalize(url: str) -> str:
     return url.lower().rstrip("/")
 
 
-def record_sample(api_id: str, state: str, at: datetime):
+def record_sample(api_id: str,user_id: str, state: str, at: datetime):
     """Store tiny sample record (only last 3)."""
     db.state_samples.insert_one({
         "api_id": api_id,
+        "user_id":user_id,
         "state": state,
         "timestamp": at
     })
     # Keep only last 3 samples
     samples = list(
-        db.state_samples.find({"api_id": api_id})
+        db.state_samples.find({"api_id": api_id,"user_id": user_id})
         .sort("timestamp", -1)
     )
     if len(samples) > SAMPLE_WINDOW:
@@ -56,10 +57,10 @@ def record_sample(api_id: str, state: str, at: datetime):
             db.state_samples.delete_one({"_id": s["_id"]})
 
 
-def get_consensus(api_id: str) -> Optional[str]:
+def get_consensus(api_id: str, user_id:str) -> Optional[str]:
     """Return dominant state if consistent for SAMPLE_WINDOW samples."""
     samples = list(
-        db.state_samples.find({"api_id": api_id})
+        db.state_samples.find({"api_id": api_id, "user_id": user_id})
         .sort("timestamp", -1)
         .limit(SAMPLE_WINDOW)
     )
@@ -76,10 +77,10 @@ def get_consensus(api_id: str) -> Optional[str]:
     return None  # inconsistent, fluctuating
 
 
-def cooldown_active(api_id: str, now: datetime) -> bool:
+def cooldown_active(api_id: str,user_id:str, now: datetime) -> bool:
     """Returns True if cooldown period is active."""
     last_alert = db.alerts.find_one(
-        {"api_id": api_id},
+        {"api_id": api_id, "user_id": user_id},
         sort=[("timestamp", -1)]
     )
     if not last_alert:
@@ -97,11 +98,12 @@ def check_api(api: dict):
     method = api["method"]
     name = api.get("name", "Unnamed API")
     api_id = str(api["_id"])
+    user_id=api["user_id"]
 
     # -------------------------------
     # GET PREVIOUS STATUS
     # -------------------------------
-    previous = db.api_status.find_one({"api_id": api_id})
+    previous = db.api_status.find_one({"api_id": api_id, "user_id": user_id})
 
     # -------------------------------
     # SEND HTTP REQUEST
@@ -122,6 +124,7 @@ def check_api(api: dict):
     # -------------------------------
     db.logs.insert_one({
         "api_id": api_id,
+        "user_id": user_id,
         "name": name,
         "url": raw_url,
         "status_code": status_code,
@@ -133,8 +136,8 @@ def check_api(api: dict):
     # -------------------------------
     # STATE SAMPLING (multi-sample detection)
     # -------------------------------
-    record_sample(api_id, state, now)
-    consensus = get_consensus(api_id)
+    record_sample(api_id,user_id, state, now)
+    consensus = get_consensus(api_id, user_id)
 
     # If consensus isn't stable yet → just update last_checked
     if not consensus:
@@ -151,6 +154,7 @@ def check_api(api: dict):
     if not previous:
         db.api_status.insert_one({
             "api_id": api_id,
+            "user_id": user_id,
             "url": raw_url,
             "state": consensus,
             "last_checked": now,
@@ -170,6 +174,7 @@ def check_api(api: dict):
             )
             db.alerts.insert_one({
                 "api_id": api_id,
+                "user_id": user_id,
                 "name": name,
                 "url": raw_url,
                 "previous_state": None,
@@ -177,7 +182,8 @@ def check_api(api: dict):
                 "severity": severity,
                 "message": msg,
                 "timestamp": now,
-                "resolved": False
+                "resolved": False,
+                "read": False
             })
         return
 
@@ -197,7 +203,7 @@ def check_api(api: dict):
     # -------------------------------
     # COOL-DOWN LOGIC (prevent spam)
     # -------------------------------
-    if cooldown_active(api_id, now):
+    if cooldown_active(api_id,user_id, now):
         # Update status silently without alert
         db.api_status.update_one(
             {"_id": previous["_id"]},
@@ -227,6 +233,7 @@ def check_api(api: dict):
 
     db.alerts.insert_one({
         "api_id": api_id,
+        "user_id": user_id,
         "name": name,
         "url": raw_url,
         "previous_state": last_state,
@@ -234,7 +241,8 @@ def check_api(api: dict):
         "severity": severity,
         "message": msg,
         "timestamp": now,
-        "resolved": False
+        "resolved": False,
+        "read": False
     })
 
     # Email only for CRITICAL states
@@ -252,6 +260,7 @@ def check_api(api: dict):
         {
             "$set": {
                 "state": consensus,
+                "user_id": user_id,
                 "last_checked": now,
                 "last_changed": now,
                 "previous_state": last_state

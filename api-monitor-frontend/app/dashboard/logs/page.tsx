@@ -2,8 +2,23 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import useSWR from "swr";
+import Cookies from "js-cookie";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const token = Cookies.get("token");
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    console.error("Failed to fetch logs", res.status);
+    return [];
+  }
+  return res.json();
+};
 
 export default function LogsTable() {
   const { data } = useSWR("http://localhost:8000/api/logs", fetcher);

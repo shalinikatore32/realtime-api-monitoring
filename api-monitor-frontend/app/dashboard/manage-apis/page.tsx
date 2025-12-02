@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Cookies from "js-cookie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +11,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,22 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, PlusCircle, Network, Pencil } from "lucide-react";
 import { API_BASE } from "@/lib/api";
+
+// Authenticated fetch wrapper
+const apiFetch = async (url: string, method = "GET", body?: any) => {
+  const token = Cookies.get("token");
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // 🔥 Add token
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  return res.json();
+};
 
 export default function ManageApis() {
   const [apis, setApis] = useState<any[]>([]);
@@ -36,16 +54,17 @@ export default function ManageApis() {
     frequency: "5",
   });
 
-  // For editing an API
   const [editingApi, setEditingApi] = useState<any>(null);
 
+  // LOAD API LIST
   const loadApis = async () => {
     try {
-      const res = await fetch(`${API_BASE}/apis`);
-      const data = await res.json();
+      const data = await apiFetch(`${API_BASE}/apis`);
+
       if (Array.isArray(data)) setApis(data);
+      else setApis([]);
     } catch (e) {
-      console.error("Error loading APIs");
+      console.error("Error loading APIs", e);
     }
   };
 
@@ -53,9 +72,11 @@ export default function ManageApis() {
     loadApis();
   }, []);
 
+  // FORM HANDLERS
   const handleChange = (e: any) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // CREATE API
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
@@ -68,36 +89,32 @@ export default function ManageApis() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const result = await apiFetch(`${API_BASE}/register`, "POST", payload);
 
-      const result = await res.json();
       if (result.status === "success") {
         setFormData({ name: "", endpoint: "", method: "GET", frequency: "5" });
         loadApis();
       }
-    } catch (error) {
+    } catch {
       alert("Backend connection failed");
     }
 
     setLoading(false);
   };
 
+  // DELETE API
   const deleteApi = async (id: string) => {
     if (!confirm("Delete this API?")) return;
 
     try {
-      await fetch(`${API_BASE}/apis/${id}`, { method: "DELETE" });
+      await apiFetch(`${API_BASE}/apis/${id}`, "DELETE");
       loadApis();
     } catch {
       alert("Delete error");
     }
   };
 
-  // ---------- EDIT API ----------
+  // OPEN EDIT MODAL
   const openEditModal = (api: any) => {
     setEditingApi(api);
     setFormData({
@@ -108,23 +125,19 @@ export default function ManageApis() {
     });
   };
 
+  // UPDATE API
   const updateApi = async () => {
     if (!editingApi) return;
 
+    const payload = {
+      name: formData.name,
+      url: formData.endpoint,
+      method: formData.method,
+      frequency: Number(formData.frequency),
+    };
+
     try {
-      const payload = {
-        name: formData.name,
-        url: formData.endpoint,
-        method: formData.method,
-        frequency: Number(formData.frequency),
-      };
-
-      await fetch(`${API_BASE}/apis/${editingApi._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
+      await apiFetch(`${API_BASE}/apis/${editingApi._id}`, "PUT", payload);
       setEditingApi(null);
       loadApis();
     } catch {
@@ -132,14 +145,12 @@ export default function ManageApis() {
     }
   };
 
-  // ---------- SEARCH + FILTER ----------
+  // SEARCH + FILTER
   const filteredApis = apis.filter((api) => {
     const matchSearch = api.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-
     const matchMethod = filterMethod === "ALL" || api.method === filterMethod;
-
     return matchSearch && matchMethod;
   });
 
@@ -166,7 +177,7 @@ export default function ManageApis() {
 
             <Input
               name="endpoint"
-              placeholder="https://example.com/v1/health"
+              placeholder="https://example.com/health"
               onChange={handleChange}
               value={formData.endpoint}
               required
@@ -205,7 +216,7 @@ export default function ManageApis() {
         </CardContent>
       </Card>
 
-      {/* Search + Filter */}
+      {/* Search & Filter */}
       <Card className="rounded-xl shadow-md animate-slide-up delay-100">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">

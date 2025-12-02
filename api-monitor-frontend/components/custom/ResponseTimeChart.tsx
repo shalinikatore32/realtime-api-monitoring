@@ -12,8 +12,25 @@ import {
   Legend,
 } from "recharts";
 import useSWR from "swr";
+import Cookies from "js-cookie";
+// import { API_BASE } from "@/lib/api";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const token = Cookies.get("token");
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    console.error("Failed to fetch response trend", res.status);
+    return [];
+  }
+
+  return res.json();
+};
 
 export default function ResponseTimeChart() {
   const { data } = useSWR("http://localhost:8000/api/response-trend", fetcher, {

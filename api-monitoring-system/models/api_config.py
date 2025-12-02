@@ -7,3 +7,4 @@ class APIConfig(BaseModel):
     url: HttpUrl
     method: str
     frequency: int
+    user_id: Optional[str] = None
