@@ -4,7 +4,8 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class APIStatus(BaseModel):
-    api_id: str                      # Reference to the API in apis collection
+    api_id: str   
+    user_id: str                   # Reference to the API in apis collection
     url: str                         # API URL
     state: str                       # UP, DOWN, SLOW
     last_changed: str                # Timestamp of last status transition

@@ -5,7 +5,8 @@ from datetime import datetime
 
 class APILog(BaseModel):
     id: Optional[str]
-    api_id: str                       # maps to APIConfig._id
+    api_id: str         
+    user_id: str               # maps to APIConfig._id
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     status_code: Optional[int]
     response_time: Optional[float]    # in ms
