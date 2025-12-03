@@ -20,3 +20,12 @@ SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT") or 587)
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASS = os.getenv("SMTP_PASS")
+
+# redis settings
+
+# Redis config (defaults)
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+REDIS_TTL_SECONDS = int(os.getenv("REDIS_TTL_SECONDS", 300))  # default 5 minutes for some cached keys
+

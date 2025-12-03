@@ -3,6 +3,14 @@
 import { Menu, User } from "lucide-react";
 import ModeToggle from "@/components/ui/mode-toggle";
 import NotificationBell from "./NotificationProvider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { logout } from "@/lib/logout";
 
 export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   return (
@@ -27,8 +35,31 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Light/Dark */}
         <ModeToggle />
 
-        {/* User */}
-        <User className="w-6 h-6 cursor-pointer" />
+        {/* User dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-2 rounded-full hover:bg-accent transition">
+              <User className="w-6 h-6" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              onClick={() => (window.location.href = "/dashboard/profile")}
+            >
+              Profile
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              className="text-red-600 font-semibold"
+              onClick={logout}
+            >
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

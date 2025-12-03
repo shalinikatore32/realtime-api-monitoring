@@ -19,9 +19,13 @@ export default function LoginPage() {
     if (data.token) {
       // Save to cookies for middleware
       Cookies.set("token", data.token);
+      Cookies.set("user_id", data.user_id);
+      Cookies.set("email", data.email);
 
       // Save to local storage for client fetcher
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("email", data.email);
 
       window.location.href = "/dashboard";
     } else {
