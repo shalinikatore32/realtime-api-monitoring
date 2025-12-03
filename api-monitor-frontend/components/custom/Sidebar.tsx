@@ -123,9 +123,24 @@ export default function Sidebar({
         </nav>
 
         {/* FOOTER */}
+
         {isExpanded && (
-          <div className="p-4 text-xs text-muted-foreground text-center border-t">
-            © {new Date().getFullYear()} API Monitor
+          <div className="p-4 border-t flex flex-col gap-3">
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user_id");
+                localStorage.removeItem("email");
+                window.location.href = "/login";
+              }}
+              className="w-full py-2 px-3 text-sm rounded-lg bg-destructive text-white hover:bg-destructive/90 transition"
+            >
+              Logout
+            </button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              © {new Date().getFullYear()} API Monitor
+            </p>
           </div>
         )}
       </aside>

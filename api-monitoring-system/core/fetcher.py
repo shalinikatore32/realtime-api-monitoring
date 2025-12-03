@@ -7,6 +7,10 @@ from typing import Optional, Tuple
 import requests
 from database.connection import db
 from utils.email_alert import send_alert_email
+# add:
+from database.redis_client import make_key, set_json, push_recent_list
+from config.settings import REDIS_TTL_SECONDS
+
 
 ALERT_TO = os.getenv("ALERT_TO")
 
@@ -133,6 +137,46 @@ def check_api(api: dict):
         "timestamp": now
     })
 
+        # --- WRITE TO REDIS (fast access for dashboard) ---
+    try:
+        latest_key = make_key("latest_log", api_id)
+        set_json(latest_key, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "name": name,
+            "url": raw_url,
+            "status_code": status_code,
+            "response_time": response_time_ms,
+            "is_up": state != "DOWN",
+            "timestamp": now.isoformat()
+        }, ex=REDIS_TTL_SECONDS)
+
+        # maintain recent logs list (bounded)
+        recent_key = make_key("logs", api_id)
+        push_recent_list(recent_key, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "status_code": status_code,
+            "response_time": response_time_ms,
+            "is_up": state != "DOWN",
+            "timestamp": now.isoformat()
+        }, maxlen=50)
+
+        # update status snapshot
+        status_key = make_key("status", api_id)
+        set_json(status_key, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "url": raw_url,
+            "state": state,
+            "last_checked": now.isoformat(),
+            "last_changed": now.isoformat()
+        }, ex=REDIS_TTL_SECONDS)
+    except Exception as e:
+        # Redis should be non-fatal — log to console and continue
+        print("⚠ Redis write failed:", str(e))
+
+
     # -------------------------------
     # STATE SAMPLING (multi-sample detection)
     # -------------------------------
@@ -216,6 +260,22 @@ def check_api(api: dict):
                 }
             }
         )
+
+            # update redis cached status (best-effort)
+    try:
+        status_key = make_key("status", api_id)
+        set_json(status_key, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "url": raw_url,
+            "state": consensus,
+            "last_checked": now.isoformat(),
+            "last_changed": now.isoformat(),
+            "previous_state": last_state
+        }, ex=REDIS_TTL_SECONDS)
+    except Exception as e:
+        print("⚠ Redis status update failed:", str(e))
+
         return
 
     # -------------------------------
@@ -267,3 +327,18 @@ def check_api(api: dict):
             }
         }
     )
+        # update redis cached status (best-effort)
+    try:
+        status_key = make_key("status", api_id)
+        set_json(status_key, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "url": raw_url,
+            "state": consensus,
+            "last_checked": now.isoformat(),
+            "last_changed": now.isoformat(),
+            "previous_state": last_state
+        }, ex=REDIS_TTL_SECONDS)
+    except Exception as e:
+        print("⚠ Redis status update failed:", str(e))
+

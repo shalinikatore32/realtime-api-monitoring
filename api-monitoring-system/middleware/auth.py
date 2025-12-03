@@ -1,3 +1,4 @@
+#middleware/auth.py
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer
 from jose import jwt
