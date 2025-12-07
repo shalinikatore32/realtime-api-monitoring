@@ -8,7 +8,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-SECRET_KEY = os.getenv("JWT_SECRET", "supersecret")
+SECRET_KEY = os.getenv("JWT_SECRET")
 ALGO = "HS256"
 
 @router.websocket("/ws/alerts")

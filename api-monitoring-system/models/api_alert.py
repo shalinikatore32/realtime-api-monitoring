@@ -10,5 +10,5 @@ class APIAlert(BaseModel):
     message: str
     severity: str = "High"           # High | Medium | Low
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    resolved: bool = False,
+    resolved: bool = False
     read: bool = False

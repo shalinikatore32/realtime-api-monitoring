@@ -31,7 +31,7 @@ async def get_logs(request: Request):
         return combined
 
     # fallback to DB (existing behavior)
-    logs = list(db.logs.find({"user_id": user_id}).sort("timestamp", -1))
+    logs = list(db.logs.find({"api_id": {"$in": api_ids}}).sort("timestamp", -1))
     for log in logs:
         log["_id"] = str(log["_id"])
     return logs
@@ -53,7 +53,7 @@ async def response_trend(request: Request):
         return trend
 
     # fallback DB
-    trend = list(db.logs.find({"user_id": user_id}, {"timestamp": 1, "response_time": 1}).sort("timestamp", 1))
+    trend = list(db.logs.find({"api_id": {"$in": api_ids}}, {"timestamp": 1, "response_time": 1}).sort("timestamp", 1))
     for t in trend:
         t["_id"] = str(t["_id"])
     return trend

@@ -6,16 +6,18 @@ from middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["Alerts"])
 
+
 async def _get_user_api_ids(user_id: str):
     apis = list(db.apis.find({"user_id": user_id}, {"_id": 1}))
     return [str(a["_id"]) for a in apis]
+
+
 # ----------------------------------------------------
 # 1️⃣ ALL ALERTS (For Alerts Table)
 # ----------------------------------------------------
 @router.get("/alerts")
 async def get_all_alerts(request: Request):
     user_id = await get_current_user(request)
-
     api_ids = await _get_user_api_ids(user_id)
 
     alerts = list(
@@ -34,7 +36,6 @@ async def get_all_alerts(request: Request):
 @router.get("/alerts/unread")
 async def get_unread_alerts(request: Request):
     user_id = await get_current_user(request)
-
     api_ids = await _get_user_api_ids(user_id)
 
     alerts = list(
@@ -72,6 +73,8 @@ async def mark_alert_as_read(alert_id: str, request: Request):
     )
 
     return {"status": "ok", "message": "Alert marked as read"}
+
+
 # ----------------------------------------------------
 # 4️⃣ Mark all unread alerts as read
 # ----------------------------------------------------
