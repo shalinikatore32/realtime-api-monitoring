@@ -42,37 +42,51 @@ export default function AlertProvider({
     const token = Cookies.get("token");
     if (!token) return;
 
-    const wsUrl = `ws://localhost:8000/ws/alerts?token=${token}`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${protocol}://localhost:8000/ws/alerts?token=${token}`;
 
-    ws.onopen = () => console.log("WS Connected");
+    let retries = 0;
+    let reconnectTimeout: number | undefined;
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
+    const connect = () => {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-        if (msg.type === "alert") {
-          const alert = msg.data;
+      ws.onopen = () => {
+        retries = 0;
+        console.log("WS Connected");
+      };
 
-          addAlert(alert);
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "alert") {
+            const alert = msg.data;
+            addAlert(alert);
 
-          // Play alert sound
-          if (alert.severity === "CRITICAL") {
-            new Audio("/alert.mp3").play().catch(() => {});
+            if (alert.severity === "CRITICAL") {
+              new Audio("/alert.mp3").play().catch(() => {});
+            }
           }
+        } catch (e) {
+          console.warn("WebSocket parse error:", e);
         }
-      } catch (e) {
-        console.warn("WebSocket parse error:", e);
-      }
+      };
+
+      ws.onclose = () => {
+        console.log("WS Disconnected — reconnecting...");
+        const delay = Math.min(30000, 1000 * 2 ** retries);
+        retries += 1;
+        reconnectTimeout = window.setTimeout(connect, delay);
+      };
     };
 
-    ws.onclose = () => {
-      console.log("WS Disconnected — reconnecting…");
-      setTimeout(() => window.location.reload(), 2000);
-    };
+    connect();
 
-    return () => ws.close();
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (wsRef.current) wsRef.current.close();
+    };
   }, []);
 
   return (

@@ -58,12 +58,12 @@ async def get_status(api_id: str, request: Request):
     # try redis first
     status_key = make_key("status", api_id)
     snap = get_json(status_key)
-    if snap and str(snap.get("user_id")) == str(user_id):
+    if snap:
         snap["_id"] = api_id
         return snap
 
-    # fallback to DB
-    status = db.api_status.find_one({"api_id": api_id, "user_id": user_id})
+    # fallback to DB (user_id is implied by api ownership)
+    status = db.api_status.find_one({"api_id": api_id})
     if not status:
         raise HTTPException(status_code=404, detail="Status not found")
     status["_id"] = str(status["_id"])
