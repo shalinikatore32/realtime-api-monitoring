@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer
 from jose import jwt
 import os
 
-SECRET = os.getenv("JWT_SECRET", "supersecret")
+SECRET = os.getenv("JWT_SECRET")
 ALGO = "HS256"
 
 bearer = HTTPBearer()

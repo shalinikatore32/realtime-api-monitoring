@@ -4,15 +4,21 @@ from database.connection import db
 
 router = APIRouter(prefix="/api", tags=["Metrics"])
 
+async def _get_user_api_ids(user_id: str):
+    apis = list(db.apis.find({"user_id": user_id}, {"_id": 1}))
+    return [str(a["_id"]) for a in apis]
+
 @router.get("/metrics")
 async def get_metrics(request: Request):
     user_id = await get_current_user(request)
 
-    # Total logs for this user
-    total_requests = db.logs.count_documents({"user_id": user_id})
+    api_ids = await _get_user_api_ids(user_id)
+
+    # Total logs for this user's APIs
+    total_requests = db.logs.count_documents({"api_id": {"$in": api_ids}})
 
     # Successful requests (is_up = True)
-    success_requests = db.logs.count_documents({"user_id": user_id, "is_up": True})
+    success_requests = db.logs.count_documents({"api_id": {"$in": api_ids}, "is_up": True})
 
     success_rate = 0
     if total_requests > 0:
@@ -20,7 +26,7 @@ async def get_metrics(request: Request):
 
     # Average response time
     pipeline = [
-        {"$match": {"user_id": user_id, "response_time": {"$ne": None}}},
+        {"$match": {"api_id": {"$in": api_ids}, "response_time": {"$ne": None}}},
         {"$group": {"_id": None, "avg": {"$avg": "$response_time"}}},
     ]
 

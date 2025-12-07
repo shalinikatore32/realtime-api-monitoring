@@ -6,7 +6,7 @@ from datetime import datetime
 class APIAlert(BaseModel):
     id: Optional[str]
     api_id: str
-    user_id: str 
+    
     message: str
     severity: str = "High"           # High | Medium | Low
     timestamp: datetime = Field(default_factory=datetime.utcnow)
