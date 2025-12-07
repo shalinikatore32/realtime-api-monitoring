@@ -8,7 +8,7 @@ import requests
 from database.connection import db
 from utils.email_alert import send_alert_email
 # add:
-from database.redis_client import make_key, set_json, push_recent_list
+from database.redis_client import make_key, set_json, push_recent_list,publish_json
 from config.settings import REDIS_TTL_SECONDS
 
 
@@ -229,6 +229,25 @@ def check_api(api: dict):
                 "resolved": False,
                 "read": False
             })
+            # ---- REAL-TIME WS ALERT (First-time alert) ----
+            try:
+                channel = make_key("alerts", user_id)
+                publish_json(channel, {
+                    "api_id": api_id,
+                    "user_id": user_id,
+                    "name": name,
+                    "url": raw_url,
+                    "previous_state": None,
+                    "current_state": consensus,
+                    "severity": severity,
+                    "message": msg,
+                    "timestamp": now.isoformat(),
+                    "resolved": False,
+                    "read": False
+                })
+            except Exception as e:
+                print("⚠ Redis WebSocket publish failed:", e)
+
         return
 
     # -------------------------------
@@ -262,19 +281,19 @@ def check_api(api: dict):
         )
 
             # update redis cached status (best-effort)
-    try:
-        status_key = make_key("status", api_id)
-        set_json(status_key, {
-            "api_id": api_id,
-            "user_id": user_id,
-            "url": raw_url,
-            "state": consensus,
-            "last_checked": now.isoformat(),
-            "last_changed": now.isoformat(),
-            "previous_state": last_state
-        }, ex=REDIS_TTL_SECONDS)
-    except Exception as e:
-        print("⚠ Redis status update failed:", str(e))
+        try:
+            status_key = make_key("status", api_id)
+            set_json(status_key, {
+                "api_id": api_id,
+                "user_id": user_id,
+                "url": raw_url,
+                "state": consensus,
+                "last_checked": now.isoformat(),
+                "last_changed": now.isoformat(),
+                "previous_state": last_state
+            }, ex=REDIS_TTL_SECONDS)
+        except Exception as e:
+            print("⚠ Redis status update failed:", str(e))
 
         return
 
@@ -304,6 +323,24 @@ def check_api(api: dict):
         "resolved": False,
         "read": False
     })
+    # ---- REAL-TIME WS ALERT (State transition) ----
+    try:
+        channel = make_key("alerts", user_id)
+        publish_json(channel, {
+            "api_id": api_id,
+            "user_id": user_id,
+            "name": name,
+            "url": raw_url,
+            "previous_state": last_state,
+            "current_state": consensus,
+            "severity": severity,
+            "message": msg,
+            "timestamp": now.isoformat(),
+            "resolved": False,
+            "read": False
+        })
+    except Exception as e:
+        print("⚠ Redis WebSocket publish failed:", e)
 
     # Email only for CRITICAL states
     if consensus in EMAIL_ON_STATES and ALERT_TO:

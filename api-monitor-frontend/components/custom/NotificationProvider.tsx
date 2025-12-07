@@ -1,80 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Bell, AlertTriangle, Info } from "lucide-react";
-import useSWR, { mutate } from "swr";
-import Cookies from "js-cookie";
 import { motion, AnimatePresence } from "framer-motion";
+import Cookies from "js-cookie";
+import { useAlerts } from "./AlertProvider";
 
-const fetcher = async (url: string) => {
-  const token = Cookies.get("token");
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  return res.json();
-};
-
-// Format time like “5m ago”
 function timeAgo(timestamp: string) {
   const t = new Date(timestamp).getTime();
   const diff = Math.floor((Date.now() - t) / 1000);
-
   if (diff < 60) return `${diff}s ago`;
-  const mins = Math.floor(diff / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  const m = Math.floor(diff / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
   return new Date(timestamp).toLocaleString();
 }
 
 export default function NotificationBell() {
-  const { data } = useSWR("http://localhost:8000/api/alerts/unread", fetcher, {
-    refreshInterval: 2000,
-  });
-
-  const [open, setOpen] = useState(false);
-  const lastAlertId = useRef<string | null>(null);
-
-  const unread = Array.isArray(data) ? data : [];
+  const { unread, removeAlert } = useAlerts();
   const unreadCount = unread.length;
+  const [open, setOpen] = useState(false);
 
-  // Play sound on new CRITICAL notification
-  useEffect(() => {
-    if (unread.length === 0) return;
-
-    const latest = unread[0];
-    if (latest._id !== lastAlertId.current) {
-      lastAlertId.current = latest._id;
-
-      if (latest.severity === "CRITICAL") {
-        new Audio("/alert.mp3").play().catch(() => {});
-      }
-    }
-  }, [unread]);
-
-  // 🔥 Mark a single alert as read
-  const markAsRead = async (alertId: string) => {
+  // Mark alert as read instantly
+  const markAsRead = async (id: string) => {
     const token = Cookies.get("token");
+    removeAlert(id);
 
-    // Instant UI update
-    mutate(
-      "http://localhost:8000/api/alerts/unread",
-      unread.filter((a) => a._id !== alertId),
-      false
-    );
-
-    await fetch(`http://localhost:8000/api/alerts/read/${alertId}`, {
+    await fetch(`http://localhost:8000/api/alerts/read/${id}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
-
-    mutate("http://localhost:8000/api/alerts/unread");
   };
 
   return (
     <div className="relative">
-      {/* Bell Icon */}
+      {/* Bell Button */}
       <button
         className="relative p-2 hover:scale-105 transition"
         onClick={() => setOpen(!open)}
@@ -108,8 +69,8 @@ export default function NotificationBell() {
               {unread.map((alert: any) => (
                 <div
                   key={alert._id}
-                  onClick={() => markAsRead(alert._id)}
                   className="p-3 border-b dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition cursor-pointer flex gap-3"
+                  onClick={() => markAsRead(alert._id)}
                 >
                   {alert.severity === "CRITICAL" ? (
                     <AlertTriangle className="w-5 h-5 text-red-600 mt-1" />
@@ -118,13 +79,7 @@ export default function NotificationBell() {
                   )}
 
                   <div className="flex-1">
-                    <p
-                      className={`font-medium ${
-                        alert.severity === "CRITICAL"
-                          ? "text-red-600"
-                          : "text-blue-600"
-                      }`}
-                    >
+                    <p className="font-medium text-red-600">
                       {alert.name} — {alert.current_state}
                     </p>
                     <p className="text-xs text-muted-foreground line-clamp-1">

@@ -1,3 +1,4 @@
+import AlertProvider from "@/components/custom/AlertProvider";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <AlertProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </AlertProvider>
       </body>
     </html>
   );

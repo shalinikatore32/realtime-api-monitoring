@@ -24,3 +24,15 @@ def push_recent_list(key: str, value: dict, maxlen: int = 50):
 def get_recent_list(key: str, start: int = 0, end: int = -1):
     items = redis_client.lrange(key, start, end)
     return [json.loads(i) for i in items] if items else []
+
+# ---- PUBLISH HELPER (synchronous) ----
+def publish_json(channel: str, message: dict):
+    """
+    Publish a JSON-serializable message to a Redis channel.
+    Best-effort — don't raise on failure.
+    """
+    try:
+        redis_client.publish(channel, json.dumps(message, default=str))
+    except Exception as e:
+        # non-fatal; scheduler should continue even if Redis pub fails
+        print("⚠ Redis publish failed:", str(e))

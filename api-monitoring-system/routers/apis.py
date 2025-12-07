@@ -5,6 +5,7 @@ from bson import ObjectId
 from database.connection import db
 from models.api_config import APIConfig
 from middleware.auth import get_current_user
+from database.redis_client import make_key, redis_client
 
 router = APIRouter(prefix="/api", tags=["APIs"])
 
@@ -57,4 +58,19 @@ async def delete_api(api_id: str, request:Request):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="API not found")
 
-    return {"status": "deleted"}
+    db.logs.delete_many({"api_id": api_id})
+    db.alerts.delete_many({"api_id": api_id})
+    db.api_status.delete_many({"api_id": api_id})
+    db.state_samples.delete_many({"api_id": api_id})
+    # Optionally remove email_logs where url contains api id (best-effort)
+    db.email_logs.delete_many({"url": {"$regex": api_id}})
+
+    # Clean Redis keys (best-effort)
+    try:
+        redis_client.delete(make_key("latest_log", api_id))
+        redis_client.delete(make_key("logs", api_id))
+        redis_client.delete(make_key("status", api_id))
+    except Exception:
+        pass
+
+    return {"status": "deleted", "message": "API and related data removed successfully"}
