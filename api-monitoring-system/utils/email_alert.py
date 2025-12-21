@@ -11,7 +11,7 @@ from database.connection import db
 
 load_dotenv()
 
-EMAIL = os.getenv("ALERT_EMAIL")
+EMAIL = os.getenv("ALERT_EMAIL_FROM")
 PASSWORD = os.getenv("ALERT_PASSWORD")
 
 SMTP_SERVER = "smtp.gmail.com"
@@ -52,6 +52,7 @@ def send_alert_email(subject: str, message: str, to_email: str, api_url: str, re
     """
     Sends alert email with throttling and HTML notice.
     """
+    print(to_email)
 
     # Throttling Check
     if not can_send_email(api_url):

@@ -1,31 +1,25 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Navbar } from "@/components/landing-page/Navbar";
+import HeroSection from "@/components/landing-page/Hero";
+import Features from "@/components/landing-page/Features";
+import LiveStatus from "@/components/landing-page/LiveStatus";
+import HowItWorks from "@/components/landing-page/HowItWorks";
+import Architecture from "@/components/landing-page/Architecture";
+import FinalCTA from "@/components/landing-page/FinalCTA";
+import Footer from "@/components/landing-page/Footer";
 
-export default function HomePage() {
+export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-slate-900 to-slate-700 text-white p-6">
-      <h1 className="text-5xl font-bold mb-4 text-center">
-        Real-Time API Monitoring System
-      </h1>
+    <main className="relative min-h-screen bg-[#05070A]">
+      <Navbar />
+      <HeroSection />
 
-      <p className="text-lg text-gray-300 max-w-xl text-center mb-8">
-        Monitor API uptime, response times, and alerts — all in one smart
-        dashboard. Built with Next.js, FastAPI & MongoDB.
-      </p>
-
-      <div className="flex gap-4">
-        <Link href="/login">
-          <Button variant="default" size="lg" className="px-8 py-6 text-lg">
-            Login
-          </Button>
-        </Link>
-
-        <Link href="/signup">
-          <Button variant="secondary" size="lg" className="px-8 py-6 text-lg">
-            Sign Up
-          </Button>
-        </Link>
-      </div>
+      {/* Next sections go here */}
+      <Features />
+      <HowItWorks />
+      <LiveStatus />
+      <Architecture />
+      <FinalCTA />
+      <Footer />
     </main>
   );
 }

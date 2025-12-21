@@ -12,7 +12,7 @@ from database.redis_client import make_key, set_json, push_recent_list,publish_j
 from config.settings import REDIS_TTL_SECONDS
 
 
-ALERT_TO = os.getenv("ALERT_TO")
+ALERT_TO = os.getenv("ALERT_EMAIL_TO")
 
 # -------------------------------
 # CONFIGURATION
@@ -42,17 +42,17 @@ def normalize(url: str) -> str:
     return url.lower().rstrip("/")
 
 
-def record_sample(api_id: str,user_id: str, state: str, at: datetime):
+def record_sample(api_id: str, state: str, at: datetime):
     """Store tiny sample record (only last 3)."""
     db.state_samples.insert_one({
         "api_id": api_id,
-        "user_id":user_id,
+        
         "state": state,
         "timestamp": at
     })
     # Keep only last 3 samples
     samples = list(
-        db.state_samples.find({"api_id": api_id,"user_id": user_id})
+        db.state_samples.find({"api_id": api_id})
         .sort("timestamp", -1)
     )
     if len(samples) > SAMPLE_WINDOW:
@@ -61,10 +61,10 @@ def record_sample(api_id: str,user_id: str, state: str, at: datetime):
             db.state_samples.delete_one({"_id": s["_id"]})
 
 
-def get_consensus(api_id: str, user_id:str) -> Optional[str]:
+def get_consensus(api_id: str) -> Optional[str]:
     """Return dominant state if consistent for SAMPLE_WINDOW samples."""
     samples = list(
-        db.state_samples.find({"api_id": api_id, "user_id": user_id})
+        db.state_samples.find({"api_id": api_id})
         .sort("timestamp", -1)
         .limit(SAMPLE_WINDOW)
     )
@@ -81,10 +81,10 @@ def get_consensus(api_id: str, user_id:str) -> Optional[str]:
     return None  # inconsistent, fluctuating
 
 
-def cooldown_active(api_id: str,user_id:str, now: datetime) -> bool:
+def cooldown_active(api_id: str, now: datetime) -> bool:
     """Returns True if cooldown period is active."""
     last_alert = db.alerts.find_one(
-        {"api_id": api_id, "user_id": user_id},
+        {"api_id": api_id},
         sort=[("timestamp", -1)]
     )
     if not last_alert:
@@ -107,7 +107,7 @@ def check_api(api: dict):
     # -------------------------------
     # GET PREVIOUS STATUS
     # -------------------------------
-    previous = db.api_status.find_one({"api_id": api_id, "user_id": user_id})
+    previous = db.api_status.find_one({"api_id": api_id})
 
     # -------------------------------
     # SEND HTTP REQUEST
@@ -142,7 +142,7 @@ def check_api(api: dict):
         latest_key = make_key("latest_log", api_id)
         set_json(latest_key, {
             "api_id": api_id,
-            "user_id": user_id,
+          
             "name": name,
             "url": raw_url,
             "status_code": status_code,
@@ -155,7 +155,7 @@ def check_api(api: dict):
         recent_key = make_key("logs", api_id)
         push_recent_list(recent_key, {
             "api_id": api_id,
-            "user_id": user_id,
+            
             "status_code": status_code,
             "response_time": response_time_ms,
             "is_up": state != "DOWN",
@@ -166,7 +166,7 @@ def check_api(api: dict):
         status_key = make_key("status", api_id)
         set_json(status_key, {
             "api_id": api_id,
-            "user_id": user_id,
+            
             "url": raw_url,
             "state": state,
             "last_checked": now.isoformat(),
@@ -180,8 +180,8 @@ def check_api(api: dict):
     # -------------------------------
     # STATE SAMPLING (multi-sample detection)
     # -------------------------------
-    record_sample(api_id,user_id, state, now)
-    consensus = get_consensus(api_id, user_id)
+    record_sample(api_id, state, now)
+    consensus = get_consensus(api_id)
 
     # If consensus isn't stable yet → just update last_checked
     if not consensus:
@@ -198,7 +198,7 @@ def check_api(api: dict):
     if not previous:
         db.api_status.insert_one({
             "api_id": api_id,
-            "user_id": user_id,
+            
             "url": raw_url,
             "state": consensus,
             "last_checked": now,
@@ -218,7 +218,7 @@ def check_api(api: dict):
             )
             db.alerts.insert_one({
                 "api_id": api_id,
-                "user_id": user_id,
+                
                 "name": name,
                 "url": raw_url,
                 "previous_state": None,
@@ -266,7 +266,7 @@ def check_api(api: dict):
     # -------------------------------
     # COOL-DOWN LOGIC (prevent spam)
     # -------------------------------
-    if cooldown_active(api_id,user_id, now):
+    if cooldown_active(api_id, now):
         # Update status silently without alert
         db.api_status.update_one(
             {"_id": previous["_id"]},
@@ -312,7 +312,7 @@ def check_api(api: dict):
 
     db.alerts.insert_one({
         "api_id": api_id,
-        "user_id": user_id,
+        
         "name": name,
         "url": raw_url,
         "previous_state": last_state,
@@ -328,7 +328,7 @@ def check_api(api: dict):
         channel = make_key("alerts", user_id)
         publish_json(channel, {
             "api_id": api_id,
-            "user_id": user_id,
+           
             "name": name,
             "url": raw_url,
             "previous_state": last_state,
@@ -369,7 +369,7 @@ def check_api(api: dict):
         status_key = make_key("status", api_id)
         set_json(status_key, {
             "api_id": api_id,
-            "user_id": user_id,
+           
             "url": raw_url,
             "state": consensus,
             "last_checked": now.isoformat(),
